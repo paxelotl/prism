@@ -1,21 +1,16 @@
 #![allow(dead_code, unused_imports)]
-use regex::Regex;
+use std::process::Command;
 
 fn main() {
-    let re_spaces = Regex::new(r"(?m)>\s+?<").unwrap();
-    let mut body = get_basic();
+    let audio_args = ["--extract-audio", "--audio-format", "mp3"];
+    let video_url = "kbNdx0yqbZE"; // temp video link
 
-    body = re_spaces.replace_all(&body, "><").to_string();
-    println!("{:?}", body);
-}
+    let output = Command::new("yt-dlp")
+        .arg("--ignore-config") // ignore system config
+        .args(audio_args) // extract only audio
+        .arg(video_url)
+        .output()
+        .expect("yt-dlp command failed.");
 
-fn get_basic() -> String {
-    let body = reqwest::blocking::get("https://www.rust-lang.org")
-        .expect("method get failed")
-        .text()
-        .expect("failed to parse")
-        .trim()
-        .to_string();
-
-    body
+    println!("{:?}", output);
 }

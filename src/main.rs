@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_imports)]
+use clap::Parser;
 use std::collections::HashMap;
 use std::process::{Command, Output};
 use std::{
@@ -7,11 +8,28 @@ use std::{
     str,
 };
 
-fn main() {
-    let playlists: HashMap<String, String> = load_playlists();
-    println!("{:?}", playlists);
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// Adds a playlist to the tracking list
+    #[arg(short = 'a', long = "add")]
+    url: Option<String>,
 
-    //track_playlist("OLAK5uy_mbDqygnl_sMuwf-UTCVZnogRtD0Z9W2YE".to_string());
+    /// List tracked playlists
+    #[arg(short = 'l', long = "list", conflicts_with = "url")]
+    list_playlists: bool,
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    if let Some(playlist_url) = cli.url {
+        println!("{playlist_url}");
+    } else {
+        println!("add command not used");
+    }
+
+    println!("printing playlists: {}", cli.list_playlists);
 }
 
 fn load_playlists() -> HashMap<String, String> {

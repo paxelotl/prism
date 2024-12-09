@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::process::{Command, Output};
 use std::{
     fs,
-    io::{Read, Write},
+    io::{Read, Result, Write},
     str,
 };
 
@@ -22,38 +22,48 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
+    let mut playlists: HashMap<String, String> = HashMap::new();
+    load(&mut playlists);
 
-    if let Some(playlist_url) = cli.url {
-        println!("{playlist_url}");
-    } else {
-        println!("add command not used");
+    if let Some(url) = cli.url {
+        track_playlist(&mut playlists, url);
     }
 
     println!("printing playlists: {}", cli.list_playlists);
+
+    save(&playlists);
 }
 
-fn load_playlists() -> HashMap<String, String> {
-    let mut playlists: HashMap<String, String> = HashMap::new();
-    let mut file = fs::File::open("tracking").expect("failed to open file");
-    let mut s = String::new();
-    file.read_to_string(&mut s)
-        .expect("failed to read file to string");
-    for line in s.lines() {
-        if let Some((left, right)) = line.split_once('=') {
-            playlists.insert(left.to_string(), right.to_string());
-        }
-    }
-
-    playlists
-}
-
-fn track_playlist(playlist_url: String) {
+fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {
     // TODO: check if playlist already tracked
     let playlist_title = get_playlist_title(playlist_url.clone());
 
     let mut file = fs::File::create("tracking").expect("file creation failed");
     file.write_all(format!("{}={}", playlist_title, playlist_url).as_bytes())
         .expect("write to file failed");
+}
+
+fn save(playlists: &HashMap<String, String>) {
+    let mut pairs = String::new();
+    for (name, url) in playlists.iter() {
+        pairs.push_str(&*format!("{name}={url}"));
+    }
+
+    let mut file = fs::File::create("tracking").expect("file creation failed");
+    file.write_all(pairs.as_bytes())
+        .expect("write to file failed");
+}
+
+fn load(playlists: &mut HashMap<String, String>) {
+    let mut file = fs::File::open("tracking").expect("failed to open file");
+    let mut s = String::new();
+    file.read_to_string(&mut s)
+        .expect("failed to read tracking file to string");
+    for line in s.lines() {
+        if let Some((name, url)) = line.split_once('=') {
+            playlists.insert(name.to_string(), url.to_string());
+        }
+    }
 }
 
 fn get_playlist_title(playlist_url: String) -> String {

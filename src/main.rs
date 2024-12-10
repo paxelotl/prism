@@ -3,8 +3,8 @@ use clap::Parser;
 use std::collections::HashMap;
 use std::process::{Command, Output};
 use std::{
-    fs,
-    io::{Read, Result, Write},
+    fs::File,
+    io::{ErrorKind, Read, Write},
     str,
 };
 
@@ -38,7 +38,7 @@ fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String)
     // TODO: check if playlist already tracked
     let playlist_title = get_playlist_title(playlist_url.clone());
 
-    let mut file = fs::File::create("tracking").expect("file creation failed");
+    let mut file = File::create("tracking").expect("file creation failed");
     file.write_all(format!("{}={}", playlist_title, playlist_url).as_bytes())
         .expect("write to file failed");
 }
@@ -49,16 +49,28 @@ fn save(playlists: &HashMap<String, String>) {
         pairs.push_str(&*format!("{name}={url}"));
     }
 
-    let mut file = fs::File::create("tracking").expect("file creation failed");
+    let mut file = File::create("tracking").expect("file creation failed");
     file.write_all(pairs.as_bytes())
         .expect("write to file failed");
 }
 
 fn load(playlists: &mut HashMap<String, String>) {
-    let mut file = fs::File::open("tracking").expect("failed to open file");
+    let mut file = match File::open("tracking") {
+        Ok(file) => file,
+        Err(error) => match error.kind() {
+            ErrorKind::NotFound => match File::create("tracking") {
+                Ok(file) => file,
+                Err(error) => panic!("Problem creating the file: {error:?}"),
+            },
+            other_error => {
+                panic!("Problem opening the file: {other_error:?}");
+            }
+        },
+    };
+
     let mut s = String::new();
     file.read_to_string(&mut s)
-        .expect("failed to read tracking file to string");
+        .expect("Problem reading \"tracking\" file to string: ");
     for line in s.lines() {
         if let Some((name, url)) = line.split_once('=') {
             playlists.insert(name.to_string(), url.to_string());

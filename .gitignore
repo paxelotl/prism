@@ -23,3 +23,5 @@ Cargo.lock
 # For personal Nix direnv integrations
 .direnv/
 .envrc
+
+tracking

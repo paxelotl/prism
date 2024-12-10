@@ -67,7 +67,8 @@ fn load(playlists: &mut HashMap<String, String>) {
 }
 
 fn get_playlist_title(playlist_url: String) -> String {
-    let title_args = ["--print", "playlist_title", "--skip-download", "-I", "1:1"];
+    let title_args = ["--flat-playlist", "--print", "playlist_title", "-I", "1:1"];
+
     let output = Command::new("yt-dlp")
         .arg("--ignore-config")
         .args(title_args)

@@ -35,10 +35,14 @@ fn main() {
 }
 
 fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {
-    // TODO: check if playlist already tracked
-    let playlist_title = get_playlist_title(playlist_url.clone());
-
-    playlists.insert(playlist_url, playlist_title);
+    // check if playlist already tracked
+    match playlists.get(&playlist_url) {
+        None => {
+            let playlist_title = get_playlist_title(playlist_url.clone());
+            playlists.insert(playlist_url, playlist_title);
+        }
+        Some(title) => println!("INFO: Playlist \"{title}\" is already tracked"),
+    }
 }
 
 fn save(playlists: &HashMap<String, String>) {

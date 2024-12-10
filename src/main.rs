@@ -3,7 +3,7 @@ use clap::Parser;
 use std::collections::HashMap;
 use std::process::{Command, Output};
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::{ErrorKind, Read, Write},
     str,
 };
@@ -53,17 +53,14 @@ fn save(playlists: &HashMap<String, String>) {
 }
 
 fn load(playlists: &mut HashMap<String, String>) {
-    let mut file = match File::open("tracking") {
+    let mut file = match OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open("tracking")
+    {
         Ok(file) => file,
-        Err(error) => match error.kind() {
-            ErrorKind::NotFound => match File::create("tracking") {
-                Ok(file) => file,
-                Err(error) => panic!("Problem creating the file: {error:?}"),
-            },
-            other_error => {
-                panic!("Problem opening the file: {other_error:?}");
-            }
-        },
+        Err(error) => panic!("Problem opening or creating \"tracking\" file: {error:?}"),
     };
 
     let mut s = String::new();

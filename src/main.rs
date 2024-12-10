@@ -38,15 +38,13 @@ fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String)
     // TODO: check if playlist already tracked
     let playlist_title = get_playlist_title(playlist_url.clone());
 
-    let mut file = File::create("tracking").expect("file creation failed");
-    file.write_all(format!("{}={}", playlist_title, playlist_url).as_bytes())
-        .expect("write to file failed");
+    playlists.insert(playlist_title, playlist_url);
 }
 
 fn save(playlists: &HashMap<String, String>) {
     let mut pairs = String::new();
     for (name, url) in playlists.iter() {
-        pairs.push_str(&*format!("{name}={url}"));
+        pairs.push_str(&*format!("{name}={url}\n"));
     }
 
     let mut file = File::create("tracking").expect("file creation failed");

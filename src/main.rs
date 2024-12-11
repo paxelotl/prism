@@ -29,7 +29,11 @@ fn main() {
         track_playlist(&mut playlists, url);
     }
 
-    println!("printing playlists: {}", cli.list_playlists);
+    if cli.list_playlists {
+        for (url, title) in playlists.iter() {
+            println!("{title} [{url}]");
+        }
+    }
 
     save(&playlists);
 }

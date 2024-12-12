@@ -77,6 +77,8 @@ fn load(playlists: &mut HashMap<String, String>) {
     for line in s.lines() {
         if let Some((url, title)) = line.split_once('=') {
             playlists.insert(url.to_string(), title.to_string());
+        } else {
+            println!("WARN: Line in \"tracking\" file failed to parse and was removed");
         }
     }
 }

@@ -1,9 +1,10 @@
 #![allow(dead_code, unused_imports)]
 use clap::Parser;
+use dirs;
 use std::collections::HashMap;
 use std::process::{Command, Output};
 use std::{
-    fs::{File, OpenOptions},
+    fs::{self, File, OpenOptions},
     io::{ErrorKind, Read, Write},
     str,
 };
@@ -20,10 +21,14 @@ struct Cli {
     list_playlists: bool,
 }
 
+const PROJECT_DIR: &str = "prism";
+
 fn main() {
-    let cli = Cli::parse();
     let mut playlists: HashMap<String, String> = HashMap::new();
-    load(&mut playlists);
+    let config_path = dirs::config_dir().unwrap().join(PROJECT_DIR);
+    load(&mut playlists, &config_path.join("tracking"));
+
+    let cli = Cli::parse();
 
     if let Some(url) = cli.url {
         track_playlist(&mut playlists, url);
@@ -35,7 +40,7 @@ fn main() {
         }
     }
 
-    save(&playlists);
+    save(&playlists, &config_path.join("tracking"));
 }
 
 fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {
@@ -48,23 +53,23 @@ fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String)
     }
 }
 
-fn save(playlists: &HashMap<String, String>) {
+fn save(playlists: &HashMap<String, String>, file_path: impl AsRef<std::path::Path>) {
     let mut pairs = String::new();
     for (url, title) in playlists.iter() {
         pairs.push_str(&*format!("{url}={title}\n"));
     }
 
-    let mut file = File::create("tracking").expect("file creation failed");
+    let mut file = File::create(file_path).expect("file creation failed");
     file.write_all(pairs.as_bytes())
         .expect("write to file failed");
 }
 
-fn load(playlists: &mut HashMap<String, String>) {
+fn load(playlists: &mut HashMap<String, String>, file_path: impl AsRef<std::path::Path>) {
     let mut file = match OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
-        .open("tracking")
+        .open(file_path)
     {
         Ok(file) => file,
         Err(error) => panic!("Problem opening or creating \"tracking\" file: {error:?}"),

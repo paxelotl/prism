@@ -16,6 +16,10 @@ struct Cli {
     #[arg(short = 'a', long = "add")]
     url: Option<String>,
 
+    /// Download all tracked playlists
+    #[arg(short = 'd', long = "download")]
+    download_playlists: bool,
+
     /// List tracked playlists
     #[arg(short = 'l', long = "list", conflicts_with = "url")]
     list_playlists: bool,
@@ -26,12 +30,17 @@ const PROJECT_DIR: &str = "prism";
 fn main() {
     let mut playlists: HashMap<String, String> = HashMap::new();
     let config_path = dirs::config_dir().unwrap().join(PROJECT_DIR);
+    let music_path = dirs::audio_dir().unwrap().join(PROJECT_DIR);
     load(&mut playlists, &config_path.join("tracking"));
 
     let cli = Cli::parse();
 
     if let Some(url) = cli.url {
         track_playlist(&mut playlists, url);
+    }
+
+    if cli.download_playlists {
+        download_playlists(&playlists, &music_path);
     }
 
     if cli.list_playlists {
@@ -41,6 +50,23 @@ fn main() {
     }
 
     save(&playlists, &config_path.join("tracking"));
+}
+
+fn download_playlists(playlists: &HashMap<String, String>, download_path: &std::path::PathBuf) {
+    for (url, title) in playlists.iter() {
+        let path = download_path.join(title);
+        println!("{path:?}");
+        let audio_args = ["--extract-audio", "--audio-format", "opus"];
+
+        Command::new("yt-dlp")
+            .arg("--ignore-config") // ignore system config
+            .args(audio_args) // extract only audio
+            .arg("--path") // yt-dlp will just create the path if it's not there
+            .arg(path)
+            .arg(url)
+            .output()
+            .expect("Downloading playlists failed");
+    }
 }
 
 fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {

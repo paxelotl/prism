@@ -56,6 +56,7 @@ fn main() {
 
     if cli.check_playlists {
         for (url, title) in &playlists {
+            println!("Checking {}", title);
             check_playlist(url, &music_path.join(title));
         }
     }
@@ -98,12 +99,12 @@ fn check_playlist(url: &String, path: &std::path::PathBuf) {
     downloaded_videos.retain(|x| !fetch_set.contains(x));
 
     for video in fetched_videos {
-        println!("downloading missing video from playlist: {}", video);
+        println!("Downloading missing video from playlist: {}", video);
         download_video(video, path);
     }
 
     for video in downloaded_videos {
-        println!("video missing from playlist should be archived: {}", video);
+        println!("Video removed from playlist should be archived: {}", video);
         // TODO: Archive system
     }
 }

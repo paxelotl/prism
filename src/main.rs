@@ -13,20 +13,25 @@ use std::{
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    /// Adds a playlist to the tracking list
+    /// Add a playlist to the tracking list
     #[arg(short = 'a', long = "add")]
-    url: Option<String>,
+    add: Option<String>,
+
+    /// Remove a playlist from the tracking list
+    #[arg(short = 'r', long = "remove")]
+    remove: Option<String>,
 
     /// Download all tracked playlists
     #[arg(short = 'd', long = "download")]
     download_playlists: bool,
 
     /// List tracked playlists
-    #[arg(short = 'l', long = "list", conflicts_with = "url")]
+    #[arg(short = 'l', long = "list", conflicts_with = "add")]
     list_playlists: bool,
 
-    /// Check playlist health
-    #[arg(short = 'c', long = "check", conflicts_with = "url")]
+    /// Check playlist health, downloading missing videos or
+    /// archiving unavailable videos
+    #[arg(short = 'c', long = "check", conflicts_with = "add")]
     check_playlists: bool,
 }
 
@@ -40,8 +45,12 @@ fn main() {
 
     let cli = Cli::parse();
 
-    if let Some(url) = cli.url {
-        track_playlist(&mut playlists, url);
+    if let Some(url) = cli.add {
+        add_playlist(&mut playlists, url);
+    }
+
+    if let Some(url) = cli.remove {
+        remove_playlist(&mut playlists, url);
     }
 
     if cli.download_playlists {
@@ -126,13 +135,20 @@ fn download_playlists(playlists: &HashMap<String, String>, path: &std::path::Pat
     }
 }
 
-fn track_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {
+fn add_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {
     // check if playlist already tracked
     if let Some(title) = playlists.get(&playlist_url) {
         println!("INFO: Playlist \"{title}\" is already tracked");
     } else {
         let playlist_title = get_playlist_title(playlist_url.clone());
         playlists.insert(playlist_url, playlist_title);
+    }
+}
+
+fn remove_playlist(playlists: &mut HashMap<String, String>, playlist_url: String) {
+    match playlists.remove(&playlist_url) {
+        None => println!("Playlist is not tracked"),
+        Some(title) => println!("{} removed", title),
     }
 }
 

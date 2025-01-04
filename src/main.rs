@@ -5,8 +5,9 @@ use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::process::{Command, Output};
 use std::{
-    fs::{self, File, OpenOptions},
-    io::{ErrorKind, Read, Write},
+    fs::{self, File},
+    io::{self, ErrorKind, Read, Write},
+    path,
     str,
 };
 
@@ -152,36 +153,50 @@ fn remove_playlist(playlists: &mut HashMap<String, String>, playlist_url: String
     }
 }
 
-fn save(playlists: &HashMap<String, String>, file_path: impl AsRef<std::path::Path>) {
+fn save(playlists: &HashMap<String, String>, file_path: impl AsRef<path::Path>) {
+    let file_path = file_path.as_ref();
+    let config_dir = file_path.parent().unwrap();
+
+    fs::create_dir_all(config_dir).unwrap();
+
+    let mut file = File::create(file_path).expect("Problem creating tracking file");
+
+    if playlists.is_empty() { return };
+
     let mut pairs = String::new();
     for (url, title) in playlists.iter() {
         pairs.push_str(&*format!("{url}={title}\n"));
     }
 
-    let mut file = File::create(file_path).expect("file creation failed");
-    file.write_all(pairs.as_bytes())
-        .expect("write to file failed");
+    file.write_all(pairs.as_bytes()).expect("Problem saving to tracking file");
 }
 
-fn load(playlists: &mut HashMap<String, String>, file_path: impl AsRef<std::path::Path>) {
-    let mut file = match OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(file_path)
-    {
+fn load(playlists: &mut HashMap<String, String>, file_path: impl AsRef<path::Path>) {
+    let file_path = file_path.as_ref();
+    let config_dir = file_path.parent().unwrap();
+
+    let mut file = match File::open(file_path) {
         Ok(file) => file,
-        Err(error) => panic!("Problem opening or creating \"tracking\" file: {error:?}"),
+        Err(error) => match error.kind() {
+            ErrorKind::NotFound => return,
+            other_err => panic!("Problem loading tracking file: {other_err:?}"),
+        },
     };
 
     let mut s = String::new();
-    file.read_to_string(&mut s)
-        .expect("Problem reading \"tracking\" file to string");
+    if let Err(err) = file.read_to_string(&mut s) {
+        if err.kind() == ErrorKind::IsADirectory {
+            eprintln!("Conflicting directory named \"tracking\" in {}", config_dir.display());
+        } else {
+            eprintln!("Problem loading tracking file to string: {err:?}");
+        }
+    };
+
     for line in s.lines() {
         if let Some((url, title)) = line.split_once('=') {
             playlists.insert(url.to_string(), title.to_string());
         } else {
-            println!("WARN: Line in \"tracking\" file failed to parse and was removed");
+            println!("WARN: Line in tracking file failed to parse and was removed");
         }
     }
 }
@@ -194,7 +209,13 @@ fn get_playlist_video_ids(url: &String) -> Vec<String> {
         .args(args)
         .arg(url)
         .output()
-        .expect("failed getting playlist ids");
+        .unwrap_or_else(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                panic!("Program yt-dlp is not found in your PATH");
+            } else {
+                panic!("Problem getting playlist ids: {err:?}");
+            }
+        });
 
     let urls: Vec<String> = str::from_utf8(&output.stdout)
         .expect("failed utf8 conversion")
@@ -213,7 +234,13 @@ fn get_playlist_title(playlist_url: String) -> String {
         .args(title_args)
         .arg(playlist_url)
         .output()
-        .expect("failed getting playlist title");
+        .unwrap_or_else(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                panic!("Program yt-dlp is not found in your PATH");
+            } else {
+                panic!("Problem getting playlist: {err:?}");
+            }
+        });
 
     let title = str::from_utf8(&output.stdout)
         .expect("failed utf8 conversion")
@@ -232,5 +259,11 @@ fn download_video(url: String, path: &std::path::PathBuf) {
         .arg(path)
         .arg(url)
         .output()
-        .expect("Downloading video failed");
+        .unwrap_or_else(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                panic!("Program yt-dlp is not found in your PATH");
+            } else {
+                panic!("Problem downloading video: {err:?}");
+            }
+        });
 }

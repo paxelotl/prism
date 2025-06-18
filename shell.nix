@@ -15,16 +15,6 @@ pkgs.mkShell rec {
     pkg-config
     openssl
     libiconv
-
-    # libcosmic deps
-    cargo
-    cmake
-    just
-    expat
-    fontconfig
-    freetype
-    libxkbcommon
-    pkgconf
   ];
   RUSTC_VERSION = overrides.toolchain.channel;
   # https://github.com/rust-lang/rust-bindgen#environment-variables

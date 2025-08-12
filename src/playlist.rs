@@ -10,8 +10,6 @@ use std::{
 
 // checks if playlist videos are up to date
 pub fn check_playlist(url: &String, path: &std::path::PathBuf) {
-    // captures brackets and every letter in it
-    let reg = Regex::new(r"\[\w+\]").unwrap();
     let mut fetched_videos: Vec<String> = get_playlist_video_ids(url);
     let mut downloaded_videos: Vec<String> = Vec::new();
 
@@ -20,16 +18,8 @@ pub fn check_playlist(url: &String, path: &std::path::PathBuf) {
     if let Ok(files) = fs::read_dir(path) {
         for file in files {
             let file_name: &str = &file.unwrap().file_name().into_string().unwrap();
-            // uses last match in case there are brackets in video title
-            if let Some(capture) = reg.find_iter(&file_name).last() {
-                let mut file_url = capture.as_str().chars();
-                file_url.next(); // remove first bracket, then remove last bracket
-                file_url.next_back();
-                let file_url = file_url.as_str();
-                downloaded_videos.push(file_url.into());
-            } else {
-                println!("No URL found in {}", file_name);
-            }
+            let file_url = parse_url(file_name);
+            downloaded_videos.push(file_url.into());
         }
     }
 
@@ -152,4 +142,56 @@ pub fn download_video(url: String, path: &std::path::PathBuf) {
                 panic!("Problem downloading video: {err:?}");
             }
         });
+}
+
+// finds the last bracket set and returns the contents
+// yt-dlp by default will output title [url].extension
+fn parse_url<'a>(name: &'a str) -> &'a str {
+    // regex captures full brackets
+    let regex = Regex::new(r"\[\w+\]").unwrap();
+    let mut url: &str = "";
+
+    // only use the last set of brackets
+    if let Some(capture) = regex.find_iter(name).last() {
+        let mut capture = capture.as_str().chars();
+        capture.next(); // remove first bracket
+        capture.next_back(); // then remove last bracket
+        url = capture.as_str();
+    } else {
+        println!("No URL found in {}", name);
+    };
+
+    url
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_normal() {
+        let result = parse_url("oval [blazer].mp4");
+        assert_eq!(result, "blazer");
+    }
+    
+    #[test]
+    fn parse_two_brackets() {
+        let result = parse_url("[oval] [blazer].mp4");
+        assert_eq!(result, "blazer");
+    }
+    
+    #[test]
+    fn parse_double_brackets() {
+        let result = parse_url("oval [[blazer]].mp4");
+        assert_eq!(result, "blazer");
+    }
+    
+    #[test]
+    fn parse_incomplete_brackets() {
+        let result = parse_url("[oval [blazer].mp4");
+        assert_eq!(result, "blazer");
+
+        let result = parse_url("oval] [blazer].mp4");
+        assert_eq!(result, "blazer");
+    }
 }

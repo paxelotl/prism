@@ -146,7 +146,7 @@ pub fn download_video(url: String, path: &std::path::PathBuf) {
 
 // finds the last bracket set and returns the contents
 // yt-dlp by default will output title [url].extension
-fn parse_url(name: & str) -> & str {
+fn parse_url(name: &str) -> &str {
     // regex captures full brackets
     let regex = Regex::new(r"\[\w+\]").unwrap();
     let mut url: &str = "";
